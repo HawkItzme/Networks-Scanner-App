@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "947777831749",
+    "project_id": "networks-scanner-app",
+    "storage_bucket": "networks-scanner-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:947777831749:android:964cbf956164992b03b42c",
+        "android_client_info": {
+          "package_name": "com.example.networks_scanner_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "947777831749-92ek364g5j0id9g04om21c08jdk5hg7e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBG7n_2ZnkFTYuH22cxStW823FB0Jvd0vo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "947777831749-92ek364g5j0id9g04om21c08jdk5hg7e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
