@@ -25,6 +25,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
+import androidx.lifecycle.lifecycleScope
 import com.example.networks_scanner_app.databinding.ActivityMainBinding
 import com.google.android.gms.common.util.DataUtils
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +53,8 @@ class MainActivity : AppCompatActivity() {
         const val MIN_TIME_BETWEEN_UPDATES: Long = 5000 // milliseconds
         const val MIN_DISTANCE_CHANGE_FOR_UPDATES = 10.0f // meters
     }
+
+    //TODO: Stop using Globalscope.launch(), it is bad practice use lifecycleScope.launch() instead
     @SuppressLint("MissingPermission", "SuspiciousIndentation")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,7 +63,7 @@ class MainActivity : AppCompatActivity() {
         networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 binding.button.setOnClickListener {
-                    GlobalScope.launch {
+                    lifecycleScope.launch{
                         updateNetworkInfo()
                     }
                 }
@@ -68,8 +71,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onLost(network: Network) {
-                    GlobalScope.launch {
-                        clearNetworkInfo()
+                lifecycleScope.launch{
+                    clearNetworkInfo()
                 }
                 super.onLost(network)
             }
@@ -137,8 +140,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
     @SuppressLint("MissingPermission")
-    private  fun startLocationUpdates() {
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME_BETWEEN_UPDATES, MIN_DISTANCE_CHANGE_FOR_UPDATES, locationListener)
+    private fun startLocationUpdates() {
+        //TODO: Always use try and catch to listeners that have exceptions that might likely crash the app in runtime.
+        try{
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME_BETWEEN_UPDATES,
+                MIN_DISTANCE_CHANGE_FOR_UPDATES, locationListener)
+        }catch (e: Exception){
+            /*  IllegalArgumentException – if listener is null
+                RuntimeException – if the calling thread has no Looper
+                SecurityException – if no suitable permission is present
+             */
+            e.printStackTrace()
+        }
+
     }
 
     private val locationListener = object : LocationListener {
@@ -164,11 +178,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-
         if (requestCode == REQUEST_LOCATION_PERMISSION && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            GlobalScope.launch {
                 startLocationUpdates()
-            }
         }else{
             Toast.makeText(this, "Bluetooth is denied.", Toast.LENGTH_SHORT).show()
         }
@@ -213,7 +224,6 @@ class MainActivity : AppCompatActivity() {
         val bluetoothGattCallback = object : BluetoothGattCallback() {
             @SuppressLint("MissingPermission")
             override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
-
 
                 // If the connection to the GATT server is successful, discover services
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
@@ -262,10 +272,8 @@ class MainActivity : AppCompatActivity() {
                 // Disconnect the GATT client
                 gatt?.disconnect()
 
-
-
                 // Display the signal strength value
-                runOnUiThread {
+                lifecycleScope.launch {
                     binding.textView2.text = "$deviceName\nMAC Address: $deviceMacAddress\nSignal Strength: $signalStrength\n\n"
                 }
                 super.onCharacteristicRead(gatt, characteristic, status)
@@ -276,7 +284,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @SuppressLint("MissingPermission")
-    private suspend fun updateNetworkInfo() {
+    private fun updateNetworkInfo() {
         val network = connectivityManager.activeNetwork
         val networkCapabilities = connectivityManager.getNetworkCapabilities(network)
         if (networkCapabilities != null) {
@@ -284,9 +292,7 @@ class MainActivity : AppCompatActivity() {
                 val wifiManager =
                     applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 val wifiInfo: WifiInfo = wifiManager.connectionInfo
-                withContext(Dispatchers.Main) {
                     binding.textView.text = "WIFI STRENGTH:- ${wifiInfo.rssi.toString()} \nMAC :- ${wifiInfo.macAddress}"
-                }
             } else if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
                 val telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
                 val allCellInfo = telephonyManager.allCellInfo
@@ -297,7 +303,7 @@ class MainActivity : AppCompatActivity() {
                         //val snr = signalInfo.cellSignalStrength.dbm - signalInfo.cellSignalStrength.cqi
                         val networkType = "LTE"
                         // Display network info in UI
-                        withContext(Dispatchers.Main) {
+                        lifecycleScope.launch {
                             binding.textView.text =
                                 "MobNet STRENGTH:- ${signalStrength} dBm \nNetwork Type :- ${networkType}"
                         }
@@ -306,7 +312,7 @@ class MainActivity : AppCompatActivity() {
                         //val snr = signalInfo.cellSignalStrength.dbm - signalInfo.cellSignalStrength.r
                         val networkType = "3G"
                         // Display network info in UI
-                        withContext(Dispatchers.Main) {
+                        lifecycleScope.launch{
                             binding.textView.text =
                                 "MobNet STRENGTH:- ${signalStrength} dBm  \nNetwork Type :- ${networkType}"
                         }
@@ -316,20 +322,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun clearNetworkInfo() {
-        withContext(Dispatchers.Main) {
+    private fun clearNetworkInfo() {
+        lifecycleScope.launch {
             binding.textView.text = "NO SIGNAL"
         }
+
     }
 
     override fun onResume() {
-        GlobalScope.launch {
+       lifecycleScope.launch {
             val networkRequest = NetworkRequest.Builder()
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .build()
-            withContext(Dispatchers.Main) {
                 connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
-            }
+
         }
         super.onResume()
     }
