@@ -7,15 +7,21 @@ import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.net.*
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.provider.Settings
 import android.telephony.*
 import android.util.Log
+import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
@@ -36,13 +42,19 @@ class MainActivity : AppCompatActivity() {
     //Bluetooth
     private lateinit var bluetoothAdapter: BluetoothAdapter
     var bluetoothGatt: BluetoothGatt? = null
+
+    //GPS
+    private lateinit var locationManager: LocationManager
     companion object {
         const val REQUEST_ENABLE_BT = 1
+        //GPS
+        const val REQUEST_LOCATION_PERMISSION = 1
+        const val MIN_TIME_BETWEEN_UPDATES: Long = 5000 // milliseconds
+        const val MIN_DISTANCE_CHANGE_FOR_UPDATES = 10.0f // meters
     }
-    @SuppressLint("MissingPermission")
+    @SuppressLint("MissingPermission", "SuspiciousIndentation")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         networkCallback = object : ConnectivityManager.NetworkCallback() {
@@ -76,9 +88,91 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Bluetooth is enabled", Toast.LENGTH_SHORT).show()
         }
         binding.button2.setOnClickListener {
-            Log.d("Taggy", "Button working")
                 scanConnectedBluetoothDevices(this)
         }
+
+        //GPS
+        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        // Check for location permission
+        // Check if the app has location permission and turn on location if permission is granted
+        /*if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // Request permission
+            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_LOCATION)
+        } else {
+            // Permission granted, start location updates
+            Toast.makeText(this, "Location is enabled", Toast.LENGTH_SHORT).show()
+        }*/
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+                REQUEST_LOCATION_PERMISSION
+            )
+        } else {
+            turnOnLocation()
+           /* if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                startActivity(intent)
+            } else {
+                // Location is already turned on
+                Toast.makeText(this, "Location is now enabled", Toast.LENGTH_SHORT).show()
+            }*/
+        }
+        binding.button3.setOnClickListener {
+            Toast.makeText(this, "This may take some time..!", Toast.LENGTH_SHORT).show()
+            binding.progressBar.visibility = View.VISIBLE
+                startLocationUpdates()
+        }
+    }
+    //GPS
+    private fun turnOnLocation() {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            startActivity(intent)
+        } else {
+            // Location is already turned on
+            Toast.makeText(this, "Location is now enabled", Toast.LENGTH_SHORT).show()
+        }
+    }
+    @SuppressLint("MissingPermission")
+    private  fun startLocationUpdates() {
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME_BETWEEN_UPDATES, MIN_DISTANCE_CHANGE_FOR_UPDATES, locationListener)
+    }
+
+    private val locationListener = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            val latitude = location.latitude
+            val longitude = location.longitude
+            val accuracy = location.accuracy
+            binding.progressBar.visibility = View.GONE
+            binding.textView3.text = "Latitude: $latitude\nLongitude: $longitude\nAccuracy: $accuracy meters"
+        }
+
+        override fun onProviderEnabled(provider: String) {
+            // Do nothing
+        }
+
+        override fun onProviderDisabled(provider: String) {
+            // Do nothing
+        }
+
+        override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {
+            // Do nothing
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+
+        if (requestCode == REQUEST_LOCATION_PERMISSION && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            GlobalScope.launch {
+                startLocationUpdates()
+            }
+        }else{
+            Toast.makeText(this, "Bluetooth is denied.", Toast.LENGTH_SHORT).show()
+        }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     //Bluetooth
@@ -103,15 +197,13 @@ class MainActivity : AppCompatActivity() {
             for (device: BluetoothDevice in connectedDevices) {
                 val deviceName = device.name
                 val deviceMacAddress = device.address
-                Log.d("Taggy", "Button working2")
                 getDeviceSignalStrength(context, device, deviceName, deviceMacAddress)
-                Log.d("Taggy", "Button working3")
                /*withContext(Dispatchers.Main) {
                     binding.textView2.append("$deviceName\nMAC Address: $deviceMacAddress\nSignal Strength: $deviceSignalStrength\n\n")
                 }*/
             }
         } else {
-                binding.textView2.text = "No connected Bluetooth devices found."
+                binding.textView2.text = "TURN ON BLUETOOTH."
         }
     }
 
@@ -231,7 +323,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onResume() {
-
         GlobalScope.launch {
             val networkRequest = NetworkRequest.Builder()
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
