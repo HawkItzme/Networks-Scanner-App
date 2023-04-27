@@ -81,13 +81,14 @@ class MainActivity : AppCompatActivity() {
         //Bluetooth
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothAdapter = bluetoothManager.adapter
-        // Check if Bluetooth is enabled
-        if (!bluetoothAdapter.isEnabled) {
-            // Ask the user to turn on Bluetooth
-            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                arrayOf(android.Manifest.permission.BLUETOOTH_CONNECT),
+                REQUEST_ENABLE_BT)
         } else {
-            // Bluetooth is already enabled, do whatever you need to do with it
+            // Permission is already granted, proceed with Bluetooth operations
+            // ...
             Toast.makeText(this, "Bluetooth is enabled", Toast.LENGTH_SHORT).show()
         }
         binding.button2.setOnClickListener {
@@ -98,13 +99,6 @@ class MainActivity : AppCompatActivity() {
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         // Check for location permission
         // Check if the app has location permission and turn on location if permission is granted
-        /*if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // Request permission
-            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_LOCATION)
-        } else {
-            // Permission granted, start location updates
-            Toast.makeText(this, "Location is enabled", Toast.LENGTH_SHORT).show()
-        }*/
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
@@ -114,13 +108,6 @@ class MainActivity : AppCompatActivity() {
             )
         } else {
             turnOnLocation()
-           /* if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                startActivity(intent)
-            } else {
-                // Location is already turned on
-                Toast.makeText(this, "Location is now enabled", Toast.LENGTH_SHORT).show()
-            }*/
         }
         binding.button3.setOnClickListener {
             Toast.makeText(this, "This may take some time..!", Toast.LENGTH_SHORT).show()
@@ -178,17 +165,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == REQUEST_LOCATION_PERMISSION && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startLocationUpdates()
-        }else{
-            Toast.makeText(this, "Bluetooth is denied.", Toast.LENGTH_SHORT).show()
+        when (requestCode) {
+            REQUEST_ENABLE_BT -> {
+                // If request is cancelled, the grantResults array is empty
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Permission is granted, proceed with Bluetooth operations
+                    // ...
+                    Toast.makeText(this, "Bluetooth is now enabled", Toast.LENGTH_SHORT).show()
+                } else {
+                    // Permission is denied, disable Bluetooth functionality or show a message
+                    // ...
+                    Toast.makeText(this, "Bluetooth is denied.", Toast.LENGTH_SHORT).show()
+                }
+                return
+            }
+            REQUEST_LOCATION_PERMISSION -> {
+                if (requestCode == REQUEST_LOCATION_PERMISSION && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    startLocationUpdates()
+                }else{
+                    Toast.makeText(this, "Location is denied.", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     //Bluetooth
     // In your activity or fragment, handle the result of the permission request
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+   /* override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == REQUEST_ENABLE_BT) {
             if (resultCode == Activity.RESULT_OK) {
                 // Bluetooth was successfully enabled by the user
@@ -199,7 +203,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         super.onActivityResult(requestCode, resultCode, data)
-    }
+    }*/
 
     @SuppressLint("MissingPermission")
     private fun scanConnectedBluetoothDevices(context: Context) {
@@ -214,7 +218,7 @@ class MainActivity : AppCompatActivity() {
                 }*/
             }
         } else {
-                binding.textView2.text = "TURN ON BLUETOOTH."
+                binding.textView2.text = "CONNECT BLUETOOTH"
         }
     }
 
