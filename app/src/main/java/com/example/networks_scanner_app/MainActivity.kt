@@ -28,6 +28,9 @@ import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.lifecycleScope
 import com.example.networks_scanner_app.databinding.ActivityMainBinding
 import com.google.android.gms.common.util.DataUtils
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.ktx.database
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -35,6 +38,9 @@ import kotlinx.coroutines.withContext
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
+
+    //Firebase
+    private lateinit var database: DatabaseReference
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var connectivityManager: ConnectivityManager
@@ -59,6 +65,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+
+        //Firebase
+        database = Firebase.database.reference
+
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
@@ -297,6 +307,14 @@ class MainActivity : AppCompatActivity() {
                     applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 val wifiInfo: WifiInfo = wifiManager.connectionInfo
                     binding.textView.text = "WIFI STRENGTH:- ${wifiInfo.rssi.toString()} \nMAC :- ${wifiInfo.macAddress}"
+                val signalData = SignalData(wifiInfo.rssi.toString(), wifiInfo.macAddress)
+                database.child("signalData").setValue(signalData)
+                    .addOnSuccessListener {
+                        Log.d(TAG, "First child write succeeded")
+                    }
+                    .addOnFailureListener {
+                        Log.e(TAG, "First child write failed: $it")
+                    }
             } else if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
                 val telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
                 val allCellInfo = telephonyManager.allCellInfo
@@ -310,6 +328,14 @@ class MainActivity : AppCompatActivity() {
                         lifecycleScope.launch {
                             binding.textView.text =
                                 "MobNet STRENGTH:- ${signalStrength} dBm \nNetwork Type :- ${networkType}"
+                            val signalData = SignalData(signalStrength.toString(), networkType)
+                            database.child("signalData").setValue(signalData)
+                                .addOnSuccessListener {
+                                    Log.d(TAG, "First child write succeeded")
+                                }
+                                .addOnFailureListener {
+                                    Log.e(TAG, "First child write failed: $it")
+                                }
                         }
                     } else if (signalInfo is CellInfoWcdma) {
                         val signalStrength = signalInfo.cellSignalStrength.dbm
@@ -319,6 +345,14 @@ class MainActivity : AppCompatActivity() {
                         lifecycleScope.launch{
                             binding.textView.text =
                                 "MobNet STRENGTH:- ${signalStrength} dBm  \nNetwork Type :- ${networkType}"
+                            val signalData = SignalData(signalStrength.toString(), networkType)
+                            database.child("signalData").setValue(signalData)
+                                .addOnSuccessListener {
+                                    Log.d(TAG, "First child write succeeded")
+                                }
+                                .addOnFailureListener {
+                                    Log.e(TAG, "First child write failed: $it")
+                                }
                         }
                     }
                 }
@@ -333,6 +367,7 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    @SuppressLint("SuspiciousIndentation")
     override fun onResume() {
        lifecycleScope.launch {
             val networkRequest = NetworkRequest.Builder()
