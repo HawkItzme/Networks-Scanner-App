@@ -202,18 +202,6 @@ class MainActivity : AppCompatActivity() {
 
     //Bluetooth
     // In your activity or fragment, handle the result of the permission request
-   /* override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == REQUEST_ENABLE_BT) {
-            if (resultCode == Activity.RESULT_OK) {
-                // Bluetooth was successfully enabled by the user
-                Toast.makeText(this, "Bluetooth is now enabled", Toast.LENGTH_SHORT).show()
-            } else {
-                // User denied the Bluetooth permission request, handle this case
-                Toast.makeText(this, "Bluetooth permission was denied", Toast.LENGTH_SHORT).show()
-            }
-        }
-        super.onActivityResult(requestCode, resultCode, data)
-    }*/
 
     @SuppressLint("MissingPermission")
     private fun scanConnectedBluetoothDevices(context: Context) {
