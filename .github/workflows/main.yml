@@ -30,10 +30,13 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          
+      - name: Grant execute permission to gradlew script
+        run: chmod +x gradlew
       
       - name: Run lint
         run: ./gradlew lintDebug
-      #8
+      
       - name: Run Unit Test
         run: ./gradlew test
 
